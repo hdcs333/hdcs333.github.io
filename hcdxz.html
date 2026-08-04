@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>合成大行知</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #0f281e;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            touch-action: none;
+        }
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            width: 100vw;
+            height: 100vh;
+            background: #1a3a2c;
+            padding: 0;
+            margin: 0;
+        }
+        .header-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            z-index: 20;
+            pointer-events: none;
+            background: transparent;
+        }
+        .header-overlay > * {
+            pointer-events: auto;
+        }
+        .score-box {
+            background: rgba(201, 168, 107, 0.9);
+            backdrop-filter: blur(4px);
+            padding: 4px 16px;
+            border-radius: 40px;
+            font-size: 1.4rem;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 0 rgba(122, 95, 58, 0.5);
+            color: #1a2f1f;
+            border: 1px solid rgba(255, 255, 200, 0.15);
+            font-weight: bold;
+        }
+        .header-btns {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .settings-toggle, .auto-btn {
+            background: rgba(201, 168, 107, 0.9);
+            backdrop-filter: blur(4px);
+            border: none;
+            color: #1a2f1f;
+            font-weight: bold;
+            font-size: 0.9rem;
+            padding: 4px 12px;
+            border-radius: 40px;
+            box-shadow: 0 4px 0 rgba(122, 95, 58, 0.5);
+            cursor: pointer;
+            transition: 0.07s ease;
+            touch-action: manipulation;
+            border: 1px solid rgba(255, 255, 200, 0.15);
+        }
+        .settings-toggle:active, .auto-btn:active { transform: translateY(4px); box-shadow: 0 0px 0 rgba(122, 95, 58, 0.5); }
+        .auto-btn.active {
+            background: rgba(201, 122, 90, 0.9);
+            box-shadow: 0 4px 0 rgba(138, 74, 58, 0.5);
+            color: #fff;
+        }
+        #autoBtn {
+            display: none;
+        }
+        .next-fruit-preview {
+            position: absolute;
+            left: 50%;
+            top: 8px;
+            transform: translateX(-50%);
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 16px;
+            color: #1a2f1f;
+            backdrop-filter: blur(4px);
+            box-shadow: 0 4px 0 rgba(122, 95, 58, 0.5);
+            border: 1px solid rgba(255, 255, 200, 0.15);
+            z-index: 20;
+            pointer-events: none;
+            text-rendering: optimizeLegibility;
+            -webkit-font-smoothing: antialiased;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            line-height: 1;
+            transition: background 0.2s ease;
+            overflow: hidden;
+            background-size: cover;
+            background-position: center;
+        }
+        .next-fruit-preview span {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            text-shadow: 0 1px 2px rgba(255,255,255,0.5);
+            font-weight: bold;
+            font-size: 14px;
+            color: #1e2d1a;
+        }
+        .canvas-wrapper {
+            flex: 1;
+            position: relative;
+            min-height: 0;
+            background: #d6cba4;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: #d6cba4;
+            cursor: pointer;
+            touch-action: none;
+        }
+        .settings-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(30, 55, 37, 0.95);
+            backdrop-filter: blur(8px);
+            padding: 12px 16px;
+            color: #f0e7b0;
+            display: none;
+            border-top: 1px solid #4a7a4a;
+            z-index: 30;
+            flex-shrink: 0;
+        }
+        .settings-panel.open { display: block; }
+        .setting-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            gap: 10px;
+        }
+        .setting-row label {
+            font-size: 0.8rem;
+            font-weight: 500;
+            min-width: 70px;
+            color: #d4dba5;
+        }
+        .setting-row input[type="range"] {
+            flex: 1;
+            -webkit-appearance: none;
+            background: #3a5a3a;
+            height: 5px;
+            border-radius: 4px;
+            outline: none;
+            min-width: 60px;
+        }
+        .setting-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #c9a86b;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+        }
+        .setting-row input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #c9a86b;
+            cursor: pointer;
+            border: none;
+        }
+        .setting-value {
+            min-width: 36px;
+            text-align: center;
+            font-weight: bold;
+            color: #ffeeaa;
+            font-size: 0.85rem;
+        }
+        .settings-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 4px;
+        }
+        .settings-footer button {
+            background: #4a7a4a;
+            border: none;
+            color: #f0e7b0;
+            font-weight: bold;
+            padding: 4px 14px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            box-shadow: 0 3px 0 #1f3a1f;
+            transition: 0.07s ease;
+        }
+        .settings-footer button:active { transform: translateY(3px); box-shadow: 0 0px 0 #1f3a1f; }
+        .settings-footer .reset-defaults {
+            background: #8a5a3a;
+            box-shadow: 0 3px 0 #5a3a2a;
+        }
+        .footer, .legend {
+            display: none;
+        }
+        @media (max-width: 500px) {
+            .score-box { font-size: 1.1rem; padding: 3px 12px; }
+            .settings-toggle, .auto-btn { font-size: 0.75rem; padding: 3px 8px; }
+            .next-fruit-preview { width: 28px; height: 28px; font-size: 13px; }
+            .setting-row label { font-size: 0.7rem; min-width: 55px; }
+            .settings-panel { padding: 10px 12px; }
+        }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <div class="canvas-wrapper">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div class="header-overlay">
+            <div class="score-box"><span id="scoreDisplay">0</span></div>
+            <div class="header-btns">
+                <button class="auto-btn" id="autoBtn">▶ 自动</button>
+                <button class="settings-toggle" id="settingsToggle">⚙️</button>
+            </div>
+        </div>
+        
+        <div class="next-fruit-preview" id="nextFruitPreview">
+            <span id="nextFruitValue">1</span>
+        </div>
+        
+        <div class="settings-panel" id="settingsPanel">
+            <div class="setting-row">
+                <label>弹性系数</label>
+                <input type="range" id="restitutionSlider" min="0" max="100" value="40">
+                <span class="setting-value" id="restitutionValue">0.40</span>
+            </div>
+            <div class="setting-row">
+                <label>水果大小</label>
+                <input type="range" id="sizeSlider" min="100" max="400" value="100">
+                <span class="setting-value" id="sizeValue">1.00</span>
+            </div>
+            <div class="settings-footer">
+                <button class="reset-defaults" id="resetDefaultsBtn">重置默认</button>
+                <button id="applySettingsBtn">应用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+<script>
+    (function(){
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreSpan = document.getElementById('scoreDisplay');
+        const nextFruitValueSpan = document.getElementById('nextFruitValue');
+        const nextFruitPreview = document.getElementById('nextFruitPreview');
+        const autoBtn = document.getElementById('autoBtn');
+        const settingsToggle = document.getElementById('settingsToggle');
+        const settingsPanel = document.getElementById('settingsPanel');
+
+        // ---------- 密码验证 ----------
+        let settingsUnlocked = false;
+        const PASSWORD = '1145141919810';
+
+        settingsToggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (settingsUnlocked) {
+                settingsPanel.classList.toggle('open');
+                return;
+            }
+            const input = prompt('你需要米玛才能使用设置哦');
+            if (input === null) return;
+            if (input === PASSWORD) {
+                settingsUnlocked = true;
+                settingsPanel.classList.add('open');
+                autoBtn.style.display = 'inline-block';
+                alert('密码正确，设置已解锁！');
+            } else {
+                alert('密码错误！');
+            }
+        });
+
+        // ---------- 物理引擎 ----------
+        const { Engine, Bodies, World, Body, Events } = Matter;
+        const engine = Engine.create({
+            gravity: { x: 0, y: 0.6 }
+        });
+        const world = engine.world;
+
+        // ---------- 画布尺寸 ----------
+        let canvasWidth = 0;
+        let canvasHeight = 0;
+        let groundHeight = 0;
+
+        // ---------- 默认设置 ----------
+        const DEFAULT_SETTINGS = {
+            restitution: 0.40,
+            sizeScale: 1.00
+        };
+
+        let currentSettings = { ...DEFAULT_SETTINGS };
+
+        // ---------- 游戏参数 ----------
+        const COLS = 6;
+        const ROWS = 8;
+        const FRUIT_TYPES = 11;
+        const TOP_OFFSET = 40;
+        const GAME_OVER_LINE_Y_RATIO = 0.08;
+        const GAME_OVER_TRIGGER_TIME = 1000;
+        const GROUND_HEIGHT_RATIO = 0.08;
+        const DROP_COOLDOWN_MS = 1000;
+
+        const COLORS = [
+            '#f5d98f', '#f5b87a', '#e8a36b', '#d48c5a', '#b8d68a',
+            '#7fc27a', '#5aa86b', '#4a8f5e', '#3a784a', '#2d623b', '#1f4a2a'
+        ];
+        const TEXT_COLOR = '#1e2d1a';
+
+        const GROUND_COLOR_TOP = '#d4a76a';
+        const GROUND_COLOR_BOTTOM = '#8b6b4d';
+
+        let walls = [];
+        let bgImage = null;
+
+        // ---------- 纹理加载（直接从当前目录加载） ----------
+        const textures = {};
+        let texturesLoaded = 0;
+        const totalTextures = FRUIT_TYPES + 1;
+        let texturesReady = false;
+
+        function loadTextures(callback) {
+            let loaded = 0;
+            // 加载水果纹理：直接使用数字命名，如 1.png, 2.png, ... 11.png
+            for (let i = 1; i <= FRUIT_TYPES; i++) {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = function() {
+                    textures[i] = img;
+                    loaded++;
+                    if (loaded === totalTextures) {
+                        callback();
+                    }
+                };
+                img.onerror = function() {
+                    console.warn('无法加载纹理: ' + i + '.png，使用纯色替代');
+                    textures[i] = null;
+                    loaded++;
+                    if (loaded === totalTextures) {
+                        callback();
+                    }
+                };
+                img.src = i + '.png';
+            }
+            // 加载背景图：bg.png
+            const bgImg = new Image();
+            bgImg.crossOrigin = 'anonymous';
+            bgImg.onload = function() {
+                bgImage = bgImg;
+                loaded++;
+                if (loaded === totalTextures) {
+                    callback();
+                }
+            };
+            bgImg.onerror = function() {
+                console.warn('无法加载背景图: bg.png，使用纯色替代');
+                bgImage = null;
+                loaded++;
+                if (loaded === totalTextures) {
+                    callback();
+                }
+            };
+            bgImg.src = 'bg.png';
+        }
+
+        // ---------- 水果大小计算 ----------
+        function getRadiusByValue(val) {
+            const minRadius = canvasWidth / 24;
+            const maxRadius = canvasWidth * 3 / 10;
+            const ratio = (val - 1) / (FRUIT_TYPES - 1);
+            const radius = minRadius + ratio * (maxRadius - minRadius);
+            return radius * currentSettings.sizeScale;
+        }
+
+        // ---------- 缩放动画系统 ----------
+        let scaleAnimations = [];
+
+        class ScaleAnimation {
+            constructor(x, y, radius, value, rotation) {
+                this.x = x; this.y = y; this.radius = radius;
+                this.value = value; this.progress = 0; this.duration = 30;
+                this.currentFrame = 0; this.active = true;
+                this.rotation = rotation || 0;
+                this.rotationSpeed = 0.00001;
+            }
+            update() {
+                this.currentFrame++;
+                this.progress = Math.min(1, this.currentFrame / this.duration);
+                if (this.progress >= 1) this.active = false;
+                this.rotation += this.rotationSpeed;
+            }
+            draw(ctx) {
+                if (!this.active) return;
+                const scale = 1 + 0.4 * Math.sin(this.progress * Math.PI) * (1 - this.progress * 0.2);
+                const r = this.radius * scale;
+                const alpha = 1 - this.progress * 0.3;
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.shadowColor = 'rgba(255,200,50,0.5)';
+                ctx.shadowBlur = 15 * (1 - this.progress);
+                
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+                ctx.clip();
+                
+                const tex = textures[this.value];
+                if (tex) {
+                    const size = r * 2;
+                    ctx.translate(this.x, this.y);
+                    ctx.rotate(this.rotation);
+                    ctx.drawImage(tex, -r, -r, size, size);
+                    ctx.setTransform(1, 0, 0, 1, 0, 0);
+                } else {
+                    ctx.fillStyle = COLORS[this.value - 1] || '#ccbb88';
+                    ctx.fill();
+                }
+                
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = '#2b4020';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                if (!textures[this.value]) {
+                    ctx.fillStyle = TEXT_COLOR;
+                    ctx.font = `bold ${Math.max(14, r * 0.75)}px "Segoe UI", system-ui, sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(this.value.toString(), this.x, this.y + 1);
+                }
+                ctx.restore();
+            }
+            isDead() { return !this.active; }
+        }
+
+        function spawnScaleEffect(x, y, value, rotation) {
+            const radius = getRadiusByValue(value);
+            scaleAnimations.push(new ScaleAnimation(x, y, radius, value, rotation || 0));
+        }
+
+        function updateAnimations() {
+            for (let i = scaleAnimations.length - 1; i >= 0; i--) {
+                scaleAnimations[i].update();
+                if (scaleAnimations[i].isDead()) scaleAnimations.splice(i, 1);
+            }
+        }
+
+        function drawAnimations() {
+            for (let anim of scaleAnimations) anim.draw(ctx);
+        }
+
+        // ---------- 游戏状态 ----------
+        let score = 0;
+        let gameOver = false;
+        let dropReady = true;
+        let fruitBodies = [];
+        let mergeTimeout = null;
+        let redLineTimer = 0;
+        let lastTimestamp = 0;
+        let dropCooldown = false;
+        let isMerging = false;
+        let nextFruitValue = 1;
+        let gameOverLineY = 30;
+
+        let autoMode = false;
+        let autoInterval = null;
+
+        // ---------- 尺寸计算 ----------
+        function resizeCanvas() {
+            const wrapper = canvas.parentElement;
+            const rect = wrapper.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            canvasWidth = rect.width;
+            canvasHeight = rect.height;
+            canvas.width = canvasWidth * dpr;
+            canvas.height = canvasHeight * dpr;
+            canvas.style.width = canvasWidth + 'px';
+            canvas.style.height = canvasHeight + 'px';
+            ctx.scale(dpr, dpr);
+            gameOverLineY = canvasHeight * GAME_OVER_LINE_Y_RATIO;
+            groundHeight = canvasHeight * GROUND_HEIGHT_RATIO;
+            rebuildWalls();
+            updateFruitPhysics();
+            updateNextPreview();
+            draw();
+        }
+
+        function rebuildWalls() {
+            for (let wall of walls) World.remove(world, wall);
+            walls = [];
+            const r = currentSettings.restitution;
+            const wallLeft = Bodies.rectangle(0, canvasHeight/2, 10, canvasHeight, { isStatic: true, friction: 0.0001, restitution: r });
+            const wallRight = Bodies.rectangle(canvasWidth, canvasHeight/2, 10, canvasHeight, { isStatic: true, friction: 0.0001, restitution: r });
+            const wallBottom = Bodies.rectangle(canvasWidth/2, canvasHeight - groundHeight/2, canvasWidth, groundHeight, { isStatic: true, friction: 0.0001, restitution: r * 0.5 });
+            walls = [wallLeft, wallRight, wallBottom];
+            World.add(world, walls);
+        }
+
+        function updateFruitPhysics() {
+            const r = currentSettings.restitution;
+            for (let body of fruitBodies) {
+                body.restitution = r;
+                body.friction = 0.0001;
+                body.frictionAir = 0.0001;
+                const newRadius = getRadiusByValue(body.fruitValue);
+                body.circleRadius = newRadius;
+                Body.setRadius(body, newRadius);
+            }
+        }
+
+        function applySettings() {
+            rebuildWalls();
+            updateFruitPhysics();
+            updateNextPreview();
+            draw();
+        }
+
+        // ---------- 工具函数 ----------
+        function getRandomFruitValue() {
+            const r = Math.random();
+            if (r < 0.30) return 1;
+            else if (r < 0.55) return 2;
+            else if (r < 0.75) return 3;
+            else if (r < 0.90) return 4;
+            else return 5;
+        }
+
+        function updateNextPreview() {
+            nextFruitValueSpan.textContent = nextFruitValue;
+            const radius = getRadiusByValue(nextFruitValue);
+            const size = Math.min(42, Math.max(20, radius * 1.4 + 6));
+            nextFruitPreview.style.width = size + 'px';
+            nextFruitPreview.style.height = size + 'px';
+            nextFruitPreview.style.fontSize = Math.max(13, radius * 0.45) + 'px';
+            const tex = textures[nextFruitValue];
+            if (tex) {
+                nextFruitPreview.style.backgroundImage = 'url(' + tex.src + ')';
+                nextFruitPreview.style.backgroundSize = 'cover';
+                nextFruitPreview.style.backgroundPosition = 'center';
+                nextFruitPreview.style.color = 'transparent';
+                nextFruitValueSpan.style.display = 'none';
+            } else {
+                nextFruitPreview.style.backgroundImage = 'none';
+                nextFruitPreview.style.background = COLORS[nextFruitValue - 1] || '#ccbb88';
+                nextFruitPreview.style.color = '#1e2d1a';
+                nextFruitValueSpan.style.display = 'flex';
+                nextFruitValueSpan.style.color = '#1e2d1a';
+            }
+            nextFruitValueSpan.style.fontSize = Math.max(13, radius * 0.45) + 'px';
+        }
+
+        function generateNextFruit() {
+            nextFruitValue = getRandomFruitValue();
+            updateNextPreview();
+        }
+
+        // ---------- 绘制水果 ----------
+        function drawFruit(ctx, body) {
+            const val = body.fruitValue;
+            const x = body.position.x;
+            const y = body.position.y;
+            const radius = getRadiusByValue(val);
+            const rotation = body.customAngle || 0;
+
+            ctx.save();
+            
+            ctx.shadowColor = 'rgba(0,0,0,0.3)';
+            ctx.shadowBlur = 8;
+            ctx.shadowOffsetY = 2;
+
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.clip();
+
+            const tex = textures[val];
+            if (tex) {
+                const size = radius * 2;
+                ctx.translate(x, y);
+                ctx.rotate(rotation);
+                ctx.drawImage(tex, -radius, -radius, size, size);
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+            } else {
+                ctx.fillStyle = COLORS[val - 1] || '#ccbb88';
+                ctx.fill();
+            }
+
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+            
+            ctx.strokeStyle = '#2b4020';
+            ctx.lineWidth = 1.8;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            if (!textures[val]) {
+                ctx.fillStyle = TEXT_COLOR;
+                ctx.font = `bold ${Math.max(14, radius * 0.75)}px "Segoe UI", system-ui, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(val.toString(), x, y + 1);
+            }
+            
+            ctx.restore();
+        }
+
+        // ---------- 合成逻辑 ----------
+        function performMerge() {
+            if (gameOver || isMerging) return false;
+            isMerging = true;
+            let merged = false;
+            const toRemove = [];
+            const toAdd = [];
+
+            let anyMerged = true;
+            let maxIterations = 20;
+            while (anyMerged && maxIterations > 0) {
+                maxIterations--;
+                anyMerged = false;
+                for (let i = 0; i < fruitBodies.length; i++) {
+                    for (let j = i + 1; j < fruitBodies.length; j++) {
+                        const a = fruitBodies[i];
+                        const b = fruitBodies[j];
+                        if (!a || !b) continue;
+                        if (toRemove.includes(a) || toRemove.includes(b)) continue;
+                        if (a.fruitValue === b.fruitValue && a.fruitValue < FRUIT_TYPES) {
+                            const dx = a.position.x - b.position.x;
+                            const dy = a.position.y - b.position.y;
+                            const dist = Math.sqrt(dx*dx + dy*dy);
+                            const radiusA = getRadiusByValue(a.fruitValue);
+                            const radiusB = getRadiusByValue(b.fruitValue);
+                            if (dist < radiusA + radiusB) {
+                                const newVal = a.fruitValue + 1;
+                                const newRadius = getRadiusByValue(newVal);
+                                const midX = (a.position.x + b.position.x) / 2;
+                                const midY = (a.position.y + b.position.y) / 2;
+                                
+                                const newBody = Bodies.circle(midX, midY, newRadius, {
+                                    restitution: currentSettings.restitution,
+                                    friction: 0.0001,
+                                    frictionAir: 0.0001,
+                                    density: 0.001 * newVal
+                                });
+                                newBody.fruitValue = newVal;
+                                Body.setVelocity(newBody, { x: 0, y: 0 });
+                                Body.setAngularVelocity(newBody, 0);
+                                newBody.customAngle = Math.random() * Math.PI * 2;
+                                
+                                toRemove.push(a);
+                                toRemove.push(b);
+                                toAdd.push(newBody);
+                                score += a.fruitValue;
+                                updateScore();
+                                spawnScaleEffect(midX, midY, newVal, newBody.customAngle);
+                                merged = true;
+                                anyMerged = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (anyMerged) break;
+                }
+
+                if (toRemove.length > 0) {
+                    for (let body of toRemove) {
+                        const idx = fruitBodies.indexOf(body);
+                        if (idx !== -1) {
+                            fruitBodies.splice(idx, 1);
+                            World.remove(world, body);
+                        }
+                    }
+                    toRemove.length = 0;
+                    for (let body of toAdd) {
+                        fruitBodies.push(body);
+                        World.add(world, body);
+                    }
+                    toAdd.length = 0;
+                }
+            }
+
+            isMerging = false;
+            return merged;
+        }
+
+        // ---------- 投放水果 ----------
+        function dropFruit(col) {
+            if (gameOver || !dropReady || dropCooldown) return false;
+            if (col < 0 || col >= COLS) return false;
+
+            const colWidth = canvasWidth / COLS;
+            const x = col * colWidth + colWidth / 2;
+            const y = TOP_OFFSET * (canvasHeight / 560);
+            const value = nextFruitValue;
+            const radius = getRadiusByValue(value);
+
+            const newBody = Bodies.circle(x, y, radius, {
+                restitution: currentSettings.restitution,
+                friction: 0.0001,
+                frictionAir: 0.0001,
+                density: 0.001 * value
+            });
+            newBody.fruitValue = value;
+            Body.setVelocity(newBody, { x: 0, y: 0 });
+            Body.setAngularVelocity(newBody, 0);
+            newBody.customAngle = Math.random() * Math.PI * 2;
+
+            let overlap = true;
+            let attempts = 0;
+            let testY = y;
+            while (overlap && attempts < 30) {
+                overlap = false;
+                for (let body of fruitBodies) {
+                    const dx = body.position.x - x;
+                    const dy = body.position.y - testY;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    if (dist < radius + getRadiusByValue(body.fruitValue) - 2) {
+                        overlap = true;
+                        break;
+                    }
+                }
+                if (overlap) {
+                    testY -= 3;
+                    attempts++;
+                }
+            }
+            if (overlap) return false;
+
+            Body.setPosition(newBody, { x: x, y: testY });
+            World.add(world, newBody);
+            fruitBodies.push(newBody);
+            generateNextFruit();
+
+            dropCooldown = true;
+            dropReady = false;
+            setTimeout(() => {
+                performMerge();
+                dropReady = true;
+                dropCooldown = false;
+            }, DROP_COOLDOWN_MS);
+            return true;
+        }
+
+        // ---------- 物理更新后处理 ----------
+        function afterPhysicsUpdate() {
+            for (let body of fruitBodies) {
+                if (body.angularVelocity !== 0) {
+                    Body.setAngularVelocity(body, 0);
+                }
+                if (body.customAngle === undefined) body.customAngle = 0;
+                const rotSpeed = body.velocity.x * 0.06;
+                body.customAngle += rotSpeed;
+            }
+        }
+
+        Events.on(engine, 'afterUpdate', afterPhysicsUpdate);
+
+        // 自动释放
+        function autoDrop() {
+            if (gameOver) {
+                stopAutoMode();
+                return;
+            }
+            const col = Math.floor(Math.random() * COLS);
+            dropFruit(col);
+        }
+
+        function startAutoMode() {
+            if (autoMode) return;
+            autoMode = true;
+            autoBtn.textContent = '⏹ 停止';
+            autoBtn.classList.add('active');
+            autoInterval = setInterval(() => {
+                for (let i = 0; i < 1; i++) {
+                    autoDrop();
+                }
+            }, 100);
+        }
+
+        function stopAutoMode() {
+            autoMode = false;
+            if (autoInterval) {
+                clearInterval(autoInterval);
+                autoInterval = null;
+            }
+            autoBtn.textContent = '▶ 自动';
+            autoBtn.classList.remove('active');
+        }
+
+        function toggleAutoMode() {
+            if (autoMode) {
+                stopAutoMode();
+            } else {
+                startAutoMode();
+            }
+        }
+
+        // ---------- 重置 ----------
+        function resetGame() {
+            stopAutoMode();
+            for (let body of fruitBodies) {
+                World.remove(world, body);
+            }
+            fruitBodies = [];
+            scaleAnimations = [];
+            score = 0;
+            gameOver = false;
+            dropReady = true;
+            dropCooldown = false;
+            redLineTimer = 0;
+            lastTimestamp = 0;
+            isMerging = false;
+            if (mergeTimeout) {
+                clearTimeout(mergeTimeout);
+                mergeTimeout = null;
+            }
+            generateNextFruit();
+            updateScore();
+            applySettings();
+        }
+
+        function updateScore() {
+            scoreSpan.textContent = score;
+        }
+
+        // ---------- 绘图 ----------
+        function drawBackground() {
+            if (bgImage) {
+                const imgAspect = bgImage.width / bgImage.height;
+                const canvasAspect = canvasWidth / canvasHeight;
+                let sx, sy, sw, sh;
+                if (imgAspect > canvasAspect) {
+                    sh = bgImage.height;
+                    sw = bgImage.height * canvasAspect;
+                    sx = (bgImage.width - sw) / 2;
+                    sy = 0;
+                } else {
+                    sw = bgImage.width;
+                    sh = bgImage.width / canvasAspect;
+                    sx = 0;
+                    sy = (bgImage.height - sh) / 2;
+                }
+                ctx.drawImage(bgImage, sx, sy, sw, sh, 0, 0, canvasWidth, canvasHeight);
+            } else {
+                ctx.fillStyle = '#d6cba4';
+                ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+            }
+        }
+
+        function draw() {
+            if (canvasWidth === 0 || canvasHeight === 0) return;
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+            drawBackground();
+
+            const groundY = canvasHeight - groundHeight;
+            const topGroundHeight = groundHeight * 0.1;
+            ctx.fillStyle = GROUND_COLOR_TOP;
+            ctx.fillRect(0, groundY, canvasWidth, topGroundHeight);
+            ctx.fillStyle = GROUND_COLOR_BOTTOM;
+            ctx.fillRect(0, groundY + topGroundHeight, canvasWidth, groundHeight - topGroundHeight);
+
+            ctx.save();
+            ctx.setLineDash([8, 8]);
+            ctx.strokeStyle = '#ff3333';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, gameOverLineY);
+            ctx.lineTo(canvasWidth, gameOverLineY);
+            ctx.stroke();
+            ctx.restore();
+
+            for (let body of fruitBodies) {
+                drawFruit(ctx, body);
+            }
+
+            drawAnimations();
+
+            if (gameOver) {
+                ctx.fillStyle = 'rgba(0,0,0,0.6)';
+                ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 48px system-ui, sans-serif';
+                ctx.fillText('游戏结束', canvasWidth/2, canvasHeight/2 - 60);
+
+                ctx.font = '32px system-ui, sans-serif';
+                ctx.fillText('得分：' + score, canvasWidth/2, canvasHeight/2 + 10);
+
+                ctx.font = '28px system-ui, sans-serif';
+                ctx.fillText('点击继续', canvasWidth/2, canvasHeight/2 + 80);
+            }
+        }
+
+        // ---------- 失败判定 ----------
+        function checkGameOver() {
+            if (gameOver) return;
+
+            let touching = false;
+            for (let body of fruitBodies) {
+                const radius = getRadiusByValue(body.fruitValue);
+                if (body.position.y - radius < gameOverLineY) {
+                    touching = true;
+                    break;
+                }
+            }
+
+            if (touching) {
+                redLineTimer += 16;
+                if (redLineTimer >= GAME_OVER_TRIGGER_TIME) {
+                    gameOver = true;
+                    if (autoMode) stopAutoMode();
+                    draw();
+                }
+            } else {
+                redLineTimer = 0;
+            }
+        }
+
+        // ---------- 事件绑定 ----------
+        function getClickCol(e) {
+            const rect = canvas.getBoundingClientRect();
+            let clientX;
+            if (e.touches) {
+                clientX = e.touches[0].clientX;
+                e.preventDefault();
+            } else {
+                clientX = e.clientX;
+            }
+            const canvasX = clientX - rect.left;
+            if (canvasX < 0 || canvasX > canvasWidth) return -1;
+            return Math.floor(canvasX / (canvasWidth / COLS));
+        }
+
+        function onCanvasClick(e) {
+            e.preventDefault();
+            if (gameOver) {
+                resetGame();
+                return;
+            }
+            const col = getClickCol(e);
+            if (col >= 0 && col < COLS) dropFruit(col);
+        }
+
+        // ---------- 物理循环 ----------
+        function updatePhysics(timestamp) {
+            Engine.update(engine, 1000 / 60);
+            if (!gameOver) {
+                checkGameOver();
+                if (fruitBodies.length > 1 && !isMerging) performMerge();
+            }
+            updateAnimations();
+            draw();
+            requestAnimationFrame(updatePhysics);
+        }
+
+        // ---------- 设置面板逻辑 ----------
+        const restitutionSlider = document.getElementById('restitutionSlider');
+        const restitutionValue = document.getElementById('restitutionValue');
+        const sizeSlider = document.getElementById('sizeSlider');
+        const sizeValue = document.getElementById('sizeValue');
+        const applyBtn = document.getElementById('applySettingsBtn');
+        const resetDefaultsBtn = document.getElementById('resetDefaultsBtn');
+
+        restitutionSlider.addEventListener('input', () => {
+            const val = parseFloat(restitutionSlider.value) / 100;
+            restitutionValue.textContent = val.toFixed(2);
+        });
+
+        sizeSlider.addEventListener('input', () => {
+            const val = parseFloat(sizeSlider.value) / 100;
+            sizeValue.textContent = val.toFixed(2);
+        });
+
+        function loadSettingsToUI() {
+            restitutionSlider.value = currentSettings.restitution * 100;
+            restitutionValue.textContent = currentSettings.restitution.toFixed(2);
+            sizeSlider.value = currentSettings.sizeScale * 100;
+            sizeValue.textContent = currentSettings.sizeScale.toFixed(2);
+        }
+
+        applyBtn.addEventListener('click', () => {
+            currentSettings.restitution = parseFloat(restitutionSlider.value) / 100;
+            currentSettings.sizeScale = parseFloat(sizeSlider.value) / 100;
+            applySettings();
+            settingsPanel.classList.remove('open');
+        });
+
+        resetDefaultsBtn.addEventListener('click', () => {
+            currentSettings.restitution = DEFAULT_SETTINGS.restitution;
+            currentSettings.sizeScale = DEFAULT_SETTINGS.sizeScale;
+            loadSettingsToUI();
+            applySettings();
+            settingsPanel.classList.remove('open');
+        });
+
+        // ---------- 按钮事件 ----------
+        autoBtn.addEventListener('click', toggleAutoMode);
+
+        // ---------- 事件监听 ----------
+        canvas.addEventListener('click', onCanvasClick);
+        canvas.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            if (gameOver) {
+                resetGame();
+                return;
+            }
+            const col = getClickCol(e);
+            if (col >= 0 && col < COLS) dropFruit(col);
+        }, { passive: false });
+
+        // ---------- 窗口大小变化 ----------
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+        });
+
+        // ---------- 加载纹理后启动 ----------
+        loadTextures(function() {
+            texturesReady = true;
+            resizeCanvas();
+            resetGame();
+            loadSettingsToUI();
+            requestAnimationFrame(updatePhysics);
+        });
+
+        setTimeout(function() {
+            if (!texturesReady) {
+                console.warn('纹理加载超时，使用纯色模式启动');
+                texturesReady = true;
+                resizeCanvas();
+                resetGame();
+                loadSettingsToUI();
+                requestAnimationFrame(updatePhysics);
+            }
+        }, 5000);
+
+    })();
+</script>
+</body>
+</html>
